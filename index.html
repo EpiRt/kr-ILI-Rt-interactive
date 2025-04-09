@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html style="height: 100%;">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+</head>
+<body style="height: 100%; margin: 0;">
+    <!-- Two containers for the vertically aligned charts -->
+    <div id="chart1" style="height: 50%;"></div>
+    <div id="chart2" style="height: 50%;"></div>
+
+    
+    <script type="text/javascript">
+        // Load data from JSON file
+        fetch('Rt_ILI_for_echarts.json')
+            .then(response => response.json())
+            .then(data1 => {
+                createCharts(data1);
+            })
+            .catch(error => {
+                console.error('Error loading JSON file:', error);
+            });
+        
+        function createCharts(data1) {
+            var dates = data1.map(item => item['date']);
+            var values1 = data1.map(item => item['ILI']);
+            var values2 = data1.map(item => item['Rt_ps_mean']);
+            var values3 = data1.map(item => item['Rt_ps_ll']);
+            var values4 = data1.map(item => item['Rt_ps_ul']);
+            var values5 = data1.map(item => item['one']);
+
+            // Initialize both charts
+            var chart1 = echarts.init(document.getElementById('chart1'));
+            var chart2 = echarts.init(document.getElementById('chart2'));
+
+            // Define the dataZoom options for both charts
+            var dataZoomOptions = [
+                {
+                    type: 'slider',
+                    xAxisIndex: [0],
+                    realtime: true,
+                    start: 0,
+                    end: 50
+                },
+                {
+                    type: 'inside',
+                    xAxisIndex: [0],
+                    start: 0,
+                    end: 50
+                }
+            ];
+
+            // Define the options for the first chart
+            var option1 = {
+                title: {
+                    text: 'Influenza-like Illnesses (ILI)'
+                },
+                xAxis: {
+                    data: dates
+                },
+                yAxis: {
+                    type: 'value',
+                    min: 0,   // Set the minimum value for the y-axis
+                    max: 120  // Set the maximum value for the y-axis
+                },
+                tooltip: {
+                    trigger: 'axis'
+                },
+                series: [{
+                    name: 'ILI',
+                    data: values1,
+                    type: 'line',
+                    areaStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        {
+                            offset: 0,
+                            color: 'rgb(255, 158, 68)'
+                        },
+                        {
+                            offset: 1,
+                            color: 'rgb(255, 70, 131)'
+                        }
+                        ])
+                    }
+                }],
+                dataZoom: dataZoomOptions // Add dataZoom to the first chart
+            };
+
+            // Define the options for the second chart
+            var option2 = {
+                title: {
+                    text: 'Reproduction number'
+                },
+                xAxis: {
+                    data: dates
+                },
+                tooltip: {
+                    trigger: 'axis'
+                },
+                yAxis: {
+                    type: 'value',
+                    min: 0.0,   // Set the minimum value for the y-axis
+                    max: 2.5  // Set the maximum value for the y-axis
+                },
+                series: [   
+                    // 평균선 (실선)
+                    {
+                        name: 'Rt',
+                        data: values2,
+                        type: 'line',
+                        z: 3, // 다른 요소들보다 위에 그리기
+                        markLine: {
+                            silent: true,  // 상호작용 비활성화
+                            symbol: ['none', 'none'],  // 시작과 끝에 모두 기호 없음
+                            lineStyle: {
+                                type: 'dashed',  // 점선
+                                width: 1,        // 선 두께
+                                color: '#666'    // 선 색상
+                            },
+                            data: [
+                                { 
+                                    yAxis: 1,
+                                    name: 'Reference Line'
+                                }
+                            ]
+                        }
+                    },
+                    // 위 신뢰구간 영역 (투명한 파란색)
+                    {
+                        name: 'Upper CI',
+                        type: 'line',
+                        data: values4, // 상한선
+                        symbol: 'circle',
+                        symbolSize: 6,
+                        itemStyle: {
+                            color: 'rgb(0, 255, 0)' // 녹색 점
+                        },
+                        lineStyle: {
+                            opacity: 0 // 선 숨기기
+                        },
+                        areaStyle: {
+                            color: 'rgba(0, 0, 255, 0.2)', // 파란색 영역
+                            origin: 'start' // 평균선에서 시작
+                        },
+                        // 중요: 마우스 호버 시에도 색상이 바뀌지 않도록 설정
+                        emphasis: {
+                            areaStyle: {
+                                color: 'rgba(0, 0, 255, 0.2)' // 호버 시에도 같은 색상 유지
+                            }
+                        },
+                        z: 1
+                    },
+                    // 하한선만 표시 (원래 영역은 흰색으로)
+                    {
+                        name: 'Lower CI',
+                        type: 'line',
+                        data: values3, // 하한선
+                        symbol: 'circle',
+                        symbolSize: 6,
+                        itemStyle: {
+                            color: 'rgb(255, 215, 0)' // 노란색 점
+                        },
+                        lineStyle: {
+                            opacity: 0 // 선 숨기기
+                        },
+                        // 하한선 아래 영역을 흰색으로 채우기
+                        areaStyle: {
+                            color: 'rgba(255, 255, 255, 1)', // 흰색
+                            origin: 'start', // 시작점에서부터
+                            opacity: 1 // 완전 불투명
+                        },
+                        // 중요: 마우스 호버 시에도 영역 색상이 변하지 않도록 설정
+                        emphasis: {
+                            areaStyle: {
+                                color: 'rgba(255, 255, 255, 1)', // 호버 시에도 같은 색상 유지
+                                opacity: 1
+                            }
+                        },
+                        z: 2
+                    }
+                ],
+                dataZoom: dataZoomOptions // Add dataZoom to the second chart
+            };
+
+            // Set the options for both charts
+            chart1.setOption(option1);
+            chart2.setOption(option2);
+
+            // Link the two charts so that dataZoom affects both
+            chart1.group = 'group1';
+            chart2.group = 'group1';
+            echarts.connect('group1'); // Link the charts
+
+            window.addEventListener('resize', chart1.resize);
+            window.addEventListener('resize', chart2.resize);
+        }
+    </script>
+</body>
+</html>
